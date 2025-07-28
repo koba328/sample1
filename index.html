@@ -1,43 +1,11 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>OSM 動態管理</title>
-  <!-- Leafletのスタイル -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-  #map { height: 100vh; width: 100vw; }
-
-  /* ラベルの見た目を調整：小さめ、軽量フォント、背景なし */
-  .label-tooltip {
-    background: white;
-    color: black;
-    font-size: 11px;
-    font-weight: normal;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
-  }
-
-</style>
-</head>
-<body>
-  <div id="map"></div>
-
-  <!-- Leafletライブラリ -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // 大阪市中心に地図初期化（ズームレベル11）
     const centerLatLng = [34.6937, 135.5023];
     const map = L.map('map').setView(centerLatLng, 11);
 
-    // OpenStreetMapタイルレイヤー
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // 赤色マーカーアイコン（Leaflet互換）
     const redIcon = L.icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
       shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -53,22 +21,26 @@
       .bindPopup('大阪市中心')
       .openPopup();
 
-    // マーカー一覧（IDをキーに保持）
+    // 🔽 地図クリック時にマーカーを追加
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      L.marker([lat, lng], { icon: redIcon })
+        .addTo(map)
+        .bindPopup(`クリック位置<br>緯度: ${lat.toFixed(5)}<br>経度: ${lng.toFixed(5)}`)
+        .openPopup();
+    });
+
     const markers = {};
 
-    // サーバーから最新の位置データを取得して地図に反映
     async function fetchPositions() {
       const res = await fetch('data/positions.json');
       const data = await res.json();
 
       for (const id in data) {
         const { lat, lng } = data[id];
-
-        // すでにマーカーが存在すれば位置を更新
         if (markers[id]) {
           markers[id].setLatLng([lat, lng]);
         } else {
-          // マーカー新規追加 + IDラベル常時表示
           markers[id] = L.marker([lat, lng], { icon: redIcon })
                          .addTo(map)
                          .bindTooltip(id, {
@@ -81,9 +53,6 @@
       }
     }
 
-    // 初回実行 & 3秒ごとの更新
     fetchPositions();
     setInterval(fetchPositions, 3000);
   </script>
-</body>
-</html>
